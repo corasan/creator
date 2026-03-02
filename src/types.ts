@@ -65,4 +65,9 @@ export interface AgentError {
   message: string
 }
 
-export type AgentEvent = AgentUpdate | AgentProgress | AgentDone | AgentError
+export interface AgentActivity {
+  type: 'activity'
+  text: string
+}
+
+export type AgentEvent = AgentUpdate | AgentProgress | AgentDone | AgentError | AgentActivity

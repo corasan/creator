@@ -1,9 +1,5 @@
-import type {
-  SDKAssistantMessage,
-  SDKMessage,
-} from '@anthropic-ai/claude-agent-sdk'
-import type { AgentTask, AgentEvent, ProjectConfig } from '../types.js'
-import { parseAgentLines } from './parseAgentLines.js'
+import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk'
+import type { AgentEvent, AgentTask, ProjectConfig, TaskStatus } from '../types.js'
 
 function buildSystemPrompt(config: ProjectConfig): string {
   return `You are a project scaffolder. The framework CLI has already been run and the project exists at: ${config.path}
@@ -14,21 +10,9 @@ Your job is to customize and enhance it based on:
 - Extra packages: ${config.packages.join(', ') || 'none'}
 - App description: ${config.prompt || 'none provided'}
 
-IMPORTANT PROTOCOL — you MUST follow this exactly:
+Use the TodoWrite tool to track your tasks. Create todos before you start, update them to in_progress as you work, and mark them completed when done.
 
-1. Start by emitting a JSON task plan on its own line:
-   PLAN:{"tasks":[{"id":"t1","label":"Install core packages"},{"id":"t2","label":"Configure Biome"},...]}
-
-2. Before starting each task, emit:
-   TASK_START:taskId
-
-3. After completing each task, emit:
-   TASK_DONE:taskId
-
-4. If a task fails, emit:
-   TASK_ERROR:taskId:error message
-
-5. Work inside the project directory: ${config.path}
+Work inside the project directory: ${config.path}
 
 Keep tasks small and focused. Typical tasks:
 - Install auto-install packages (mmkv, unistyles, dev-client, build-properties for expo)
@@ -41,23 +25,10 @@ Keep tasks small and focused. Typical tasks:
 Do the actual work — read files, write files, run shell commands. Do not just describe what you would do.`
 }
 
-function extractText(msg: SDKAssistantMessage): string {
-  let text = ''
-  const content = msg.message.content
-  if (Array.isArray(content)) {
-    for (const block of content) {
-      if (
-        typeof block === 'object' &&
-        block !== null &&
-        'type' in block &&
-        block.type === 'text' &&
-        'text' in block
-      ) {
-        text += (block as { type: 'text'; text: string }).text
-      }
-    }
-  }
-  return text
+function mapStatus(status: string): TaskStatus {
+  if (status === 'in_progress') return 'running'
+  if (status === 'completed') return 'done'
+  return 'pending'
 }
 
 export async function* runAgent(
@@ -65,49 +36,60 @@ export async function* runAgent(
 ): AsyncGenerator<AgentEvent> {
   const { query } = await import('@anthropic-ai/claude-agent-sdk')
 
-  let planEmitted = false
-  let buffer = ''
-
   try {
     for await (const message of query({
-      prompt: `Scaffold the project at ${config.path}. Follow the PLAN/TASK_START/TASK_DONE protocol exactly.`,
+      prompt: `Scaffold the project at ${config.path}. Use TodoWrite to track all tasks.`,
       options: {
         cwd: config.path,
         permissionMode: 'bypassPermissions',
         systemPrompt: buildSystemPrompt(config),
+        pathToClaudeCodeExecutable: Bun.which('claude') ?? 'claude',
       },
     })) {
-      // Accumulate text output from assistant messages
       const msg = message as SDKMessage
+
       if (msg.type === 'assistant') {
-        buffer += extractText(msg)
+        const content = msg.message.content
+        if (!Array.isArray(content)) continue
+
+        for (const block of content) {
+          if (
+            typeof block !== 'object' ||
+            block === null ||
+            !('type' in block)
+          )
+            continue
+
+          if (block.type === 'tool_use' && 'name' in block && 'input' in block) {
+            const name = (block as { name: string }).name
+            const input = (block as { input: unknown }).input
+
+            if (name === 'TodoWrite' && typeof input === 'object' && input !== null && 'todos' in input) {
+              const raw = (input as { todos: unknown }).todos
+              if (!Array.isArray(raw)) continue
+
+              const tasks: AgentTask[] = raw.map((t: unknown, i: number) => {
+                const todo = t as Record<string, unknown>
+                return {
+                  id: String(todo.id ?? i),
+                  label: String(todo.content ?? ''),
+                  status: mapStatus(String(todo.status ?? 'pending')),
+                }
+              })
+              yield { type: 'plan', tasks }
+            } else {
+              yield { type: 'activity', text: name }
+            }
+          }
+        }
       }
 
-      // Parse protocol markers from buffer line by line
-      const lines = buffer.split('\n')
-      buffer = lines.pop() ?? ''
-
-      const parsed = parseAgentLines(lines, planEmitted)
-      for (const event of parsed.events) yield event
-      planEmitted = parsed.planEmitted
-
       if (msg.type === 'result') {
-        if (buffer.trim()) {
-          const flushed = parseAgentLines(buffer.split('\n'), planEmitted)
-          for (const event of flushed.events) yield event
-          planEmitted = flushed.planEmitted
-          buffer = ''
-        }
         yield { type: 'done' }
         return
       }
     }
 
-    if (buffer.trim()) {
-      const flushed = parseAgentLines(buffer.split('\n'), planEmitted)
-      for (const event of flushed.events) yield event
-      planEmitted = flushed.planEmitted
-    }
     yield { type: 'done' }
   } catch (e) {
     yield { type: 'error', message: String(e) }

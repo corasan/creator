@@ -18,6 +18,7 @@ export function AgentRunner({ config, onDone, onError }: Props) {
   const [phase, setPhase] = useState<Phase>('scaffolding')
   const [tasks, setTasks] = useState<AgentTask[]>([])
   const [errorMsg, setErrorMsg] = useState('')
+  const [activity, setActivity] = useState('')
 
   useEffect(() => {
     async function run() {
@@ -43,6 +44,8 @@ export function AgentRunner({ config, onDone, onError }: Props) {
                 : t,
             ),
           )
+        } else if (event.type === 'activity') {
+          setActivity(event.text)
         } else if (event.type === 'done') {
           setPhase('done')
           onDone()
@@ -98,7 +101,7 @@ export function AgentRunner({ config, onDone, onError }: Props) {
           <Text color="cyan">
             <Spinner type="dots" />
           </Text>
-          <Text dimColor>Agent is planning...</Text>
+          <Text dimColor>{activity ? `Running: ${activity}` : 'Agent is planning...'}</Text>
         </Box>
       )}
     </Box>
