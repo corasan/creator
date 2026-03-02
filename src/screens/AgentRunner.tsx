@@ -91,10 +91,18 @@ export function AgentRunner({ config, onDone, onError }: Props) {
         <Text>Framework scaffolded</Text>
       </Box>
       {tasks.length > 0 && (
-        <TaskList
-          tasks={tasks}
-          title={phase === 'done' ? 'All done!' : 'Customizing project...'}
-        />
+        <>
+          <TaskList
+            tasks={tasks}
+            title={phase === 'done' ? 'All done!' : 'Customizing project...'}
+          />
+          {phase === 'agent' && activity && (
+            <Box marginLeft={2} gap={1}>
+              <Text dimColor>↳</Text>
+              <Text dimColor>{activity}</Text>
+            </Box>
+          )}
+        </>
       )}
       {tasks.length === 0 && phase === 'agent' && (
         <Box gap={1}>
