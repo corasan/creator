@@ -1,5 +1,10 @@
 import type { SDKMessage } from '@anthropic-ai/claude-agent-sdk'
-import type { AgentEvent, AgentTask, ProjectConfig, TaskStatus } from '../types.js'
+import type {
+  AgentEvent,
+  AgentTask,
+  ProjectConfig,
+  TaskStatus,
+} from '../types.js'
 
 function buildSystemPrompt(config: ProjectConfig): string {
   return `You are a project scaffolder. The framework CLI has already been run and the project exists at: ${config.path}
@@ -21,6 +26,7 @@ Keep tasks small and focused. Typical tasks:
 - Configure biome.json (for non-nitro projects)
 - Apply app description customizations (update app name, add placeholder screens per prompt)
 - Run final install
+- Do not prebuild or build the iOS or android app
 
 Do the actual work — read files, write files, run shell commands. Do not just describe what you would do.`
 }
@@ -53,18 +59,23 @@ export async function* runAgent(
         if (!Array.isArray(content)) continue
 
         for (const block of content) {
-          if (
-            typeof block !== 'object' ||
-            block === null ||
-            !('type' in block)
-          )
+          if (typeof block !== 'object' || block === null || !('type' in block))
             continue
 
-          if (block.type === 'tool_use' && 'name' in block && 'input' in block) {
+          if (
+            block.type === 'tool_use' &&
+            'name' in block &&
+            'input' in block
+          ) {
             const name = (block as { name: string }).name
             const input = (block as { input: unknown }).input
 
-            if (name === 'TodoWrite' && typeof input === 'object' && input !== null && 'todos' in input) {
+            if (
+              name === 'TodoWrite' &&
+              typeof input === 'object' &&
+              input !== null &&
+              'todos' in input
+            ) {
               const raw = (input as { todos: unknown }).todos
               if (!Array.isArray(raw)) continue
 
