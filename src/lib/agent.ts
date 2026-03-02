@@ -1,5 +1,8 @@
+import type {
+  SDKAssistantMessage,
+  SDKMessage,
+} from '@anthropic-ai/claude-agent-sdk'
 import type { AgentTask, ProjectConfig } from '../types.js'
-import type { SDKAssistantMessage, SDKMessage } from '@anthropic-ai/claude-agent-sdk'
 
 export interface AgentUpdate {
   type: 'plan'
@@ -65,7 +68,13 @@ function extractText(msg: SDKAssistantMessage): string {
   const content = msg.message.content
   if (Array.isArray(content)) {
     for (const block of content) {
-      if (typeof block === 'object' && block !== null && 'type' in block && block.type === 'text' && 'text' in block) {
+      if (
+        typeof block === 'object' &&
+        block !== null &&
+        'type' in block &&
+        block.type === 'text' &&
+        'text' in block
+      ) {
         text += (block as { type: 'text'; text: string }).text
       }
     }
@@ -73,7 +82,9 @@ function extractText(msg: SDKAssistantMessage): string {
   return text
 }
 
-export async function* runAgent(config: ProjectConfig): AsyncGenerator<AgentEvent> {
+export async function* runAgent(
+  config: ProjectConfig,
+): AsyncGenerator<AgentEvent> {
   const { query } = await import('@anthropic-ai/claude-agent-sdk')
 
   let planEmitted = false
@@ -103,7 +114,9 @@ export async function* runAgent(config: ProjectConfig): AsyncGenerator<AgentEven
 
         if (!planEmitted && trimmed.startsWith('PLAN:')) {
           try {
-            const json = JSON.parse(trimmed.slice(5)) as { tasks: Array<{ id: string; label: string }> }
+            const json = JSON.parse(trimmed.slice(5)) as {
+              tasks: Array<{ id: string; label: string }>
+            }
             const tasks: AgentTask[] = json.tasks.map(t => ({
               ...t,
               status: 'pending' as const,
@@ -123,7 +136,8 @@ export async function* runAgent(config: ProjectConfig): AsyncGenerator<AgentEven
           const rest = trimmed.slice(11)
           const colonIdx = rest.indexOf(':')
           const taskId = colonIdx >= 0 ? rest.slice(0, colonIdx) : rest
-          const error = colonIdx >= 0 ? rest.slice(colonIdx + 1) : 'Unknown error'
+          const error =
+            colonIdx >= 0 ? rest.slice(colonIdx + 1) : 'Unknown error'
           yield { type: 'progress', taskId, status: 'error', error }
         }
       }

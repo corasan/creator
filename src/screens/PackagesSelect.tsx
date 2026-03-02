@@ -33,7 +33,9 @@ export function PackagesSelect({ onSelect }: Props) {
     <Box flexDirection="column" gap={1}>
       <Text bold>
         Optional packages{' '}
-        <Text dimColor>(↑↓ navigate, enter to toggle, select Done when finished)</Text>
+        <Text dimColor>
+          (↑↓ navigate, enter to toggle, select Done when finished)
+        </Text>
       </Text>
       <Box flexDirection="column" marginLeft={1}>
         {items.map((pkg, i) => (

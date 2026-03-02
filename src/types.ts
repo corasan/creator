@@ -5,12 +5,7 @@ export type Framework =
   | 'nitro-library'
   | 'ink-cli'
 
-export type Backend =
-  | 'convex'
-  | 'supabase'
-  | 'instantdb'
-  | 'local'
-  | 'none'
+export type Backend = 'convex' | 'supabase' | 'instantdb' | 'local' | 'none'
 
 export type TaskStatus = 'pending' | 'running' | 'done' | 'error' | 'skipped'
 
@@ -35,9 +30,9 @@ export interface ProjectConfig {
   path: string
   framework: Framework
   backend: Backend
-  packages: string[]   // selected optional package values
-  prompt: string       // user's app description (may be empty)
-  wizard: boolean      // --wizard flag
+  packages: string[] // selected optional package values
+  prompt: string // user's app description (may be empty)
+  wizard: boolean // --wizard flag
 }
 
 export interface AgentTask {

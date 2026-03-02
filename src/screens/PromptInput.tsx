@@ -12,8 +12,7 @@ export function PromptInput({ onSubmit }: Props) {
   return (
     <Box flexDirection="column" gap={1}>
       <Text bold>
-        Describe your app{' '}
-        <Text dimColor>(optional — press enter to skip)</Text>
+        Describe your app <Text dimColor>(optional — press enter to skip)</Text>
       </Text>
       <Box gap={1}>
         <Text color="cyan">›</Text>

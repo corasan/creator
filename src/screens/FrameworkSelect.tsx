@@ -11,10 +11,7 @@ export function FrameworkSelect({ onSelect }: Props) {
   return (
     <Box flexDirection="column" gap={1}>
       <Text bold>Which framework?</Text>
-      <SelectInput
-        items={FRAMEWORKS}
-        onSelect={item => onSelect(item.value)}
-      />
+      <SelectInput items={FRAMEWORKS} onSelect={item => onSelect(item.value)} />
     </Box>
   )
 }

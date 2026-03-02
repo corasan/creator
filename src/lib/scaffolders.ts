@@ -1,5 +1,5 @@
-import path from 'node:path'
 import fs from 'node:fs'
+import path from 'node:path'
 import type { Framework } from '../types.js'
 
 export interface ScaffoldResult {
@@ -26,11 +26,27 @@ export function scaffoldProject(
 
   switch (framework) {
     case 'expo':
-      return runCmd('bunx', ['create-expo-app', name, '--template', 'blank-typescript'])
+      return runCmd('bunx', [
+        'create-expo-app',
+        name,
+        '--template',
+        'blank-typescript',
+      ])
     case 'tanstack-start':
-      return runCmd('bunx', ['create-tsrouter-app@latest', name, '--template', 'start-basic'])
+      return runCmd('bunx', [
+        'create-tsrouter-app@latest',
+        name,
+        '--template',
+        'start-basic',
+      ])
     case 'nextjs':
-      return runCmd('bunx', ['create-next-app@latest', name, '--typescript', '--tailwind', '--no-git'])
+      return runCmd('bunx', [
+        'create-next-app@latest',
+        name,
+        '--typescript',
+        '--tailwind',
+        '--no-git',
+      ])
     case 'nitro-library':
       return runCmd('bunx', ['create-nitro-lib', name])
     case 'ink-cli':
