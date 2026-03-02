@@ -65,6 +65,16 @@ describe('parseAgentLines', () => {
     expect(events).toHaveLength(0)
   })
 
+  it('preserves colons in the error message portion of TASK_ERROR', () => {
+    const { events } = parseAgentLines(['TASK_ERROR:t1:failed: exit code 1'], false)
+    expect(events[0]).toEqual({
+      type: 'progress',
+      taskId: 't1',
+      status: 'error',
+      error: 'failed: exit code 1',
+    })
+  })
+
   it('emits multiple events from a batch of lines in order', () => {
     const { events } = parseAgentLines(
       [

@@ -41,3 +41,26 @@ export interface AgentTask {
   status: TaskStatus
   error?: string
 }
+
+export interface AgentUpdate {
+  type: 'plan'
+  tasks: AgentTask[]
+}
+
+export interface AgentProgress {
+  type: 'progress'
+  taskId: string
+  status: 'running' | 'done' | 'error'
+  error?: string
+}
+
+export interface AgentDone {
+  type: 'done'
+}
+
+export interface AgentError {
+  type: 'error'
+  message: string
+}
+
+export type AgentEvent = AgentUpdate | AgentProgress | AgentDone | AgentError

@@ -2,31 +2,8 @@ import type {
   SDKAssistantMessage,
   SDKMessage,
 } from '@anthropic-ai/claude-agent-sdk'
-import type { AgentTask, ProjectConfig } from '../types.js'
+import type { AgentTask, AgentEvent, ProjectConfig } from '../types.js'
 import { parseAgentLines } from './parseAgentLines.js'
-
-export interface AgentUpdate {
-  type: 'plan'
-  tasks: AgentTask[]
-}
-
-export interface AgentProgress {
-  type: 'progress'
-  taskId: string
-  status: 'running' | 'done' | 'error'
-  error?: string
-}
-
-export interface AgentDone {
-  type: 'done'
-}
-
-export interface AgentError {
-  type: 'error'
-  message: string
-}
-
-export type AgentEvent = AgentUpdate | AgentProgress | AgentDone | AgentError
 
 function buildSystemPrompt(config: ProjectConfig): string {
   return `You are a project scaffolder. The framework CLI has already been run and the project exists at: ${config.path}

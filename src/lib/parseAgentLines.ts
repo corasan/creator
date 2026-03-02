@@ -1,4 +1,4 @@
-import type { AgentEvent } from './agent.js'
+import type { AgentEvent } from '../types.js'
 import type { AgentTask } from '../types.js'
 
 export function parseAgentLines(
