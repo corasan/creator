@@ -9,12 +9,13 @@ function getFlag(flag: string): string | undefined {
   return idx !== -1 ? args[idx + 1] : undefined
 }
 
-const targetPath = getFlag('-p')
+const parentDir = getFlag('-p')
 const wizard = args.includes('--wizard')
 
-if (!targetPath) {
-  console.error('Usage: create -p <path> [--wizard]')
+if (!parentDir) {
+  console.error('Usage: create -p <parent-dir> [--wizard]')
+  console.error('Example: create -p ~/Projects')
   process.exit(1)
 }
 
-render(<App path={targetPath} wizard={wizard} />)
+render(<App parentDir={parentDir} wizard={wizard} />)

@@ -1,3 +1,4 @@
+import path from 'node:path'
 import { Box, Text, useApp } from 'ink'
 import { useCallback, useState } from 'react'
 import { Header } from './components/Header.js'
@@ -5,10 +6,12 @@ import { AgentRunner } from './screens/AgentRunner.js'
 import { Done } from './screens/Done.js'
 import { FrameworkSelect } from './screens/FrameworkSelect.js'
 import { OptionsSelect } from './screens/OptionsSelect.js'
+import { ProjectNameInput } from './screens/ProjectNameInput.js'
 import { PromptInput } from './screens/PromptInput.js'
 import type { Backend, Framework, ProjectConfig } from './types.js'
 
 type Phase =
+  | 'project-name'
   | 'framework-select'
   | 'options-select'
   | 'prompt-input'
@@ -17,15 +20,30 @@ type Phase =
   | 'error'
 
 interface Props {
-  path: string
+  parentDir: string
   wizard: boolean
 }
 
-export function App({ path, wizard }: Props) {
+export function App({ parentDir, wizard }: Props) {
   const { exit } = useApp()
-  const [phase, setPhase] = useState<Phase>('framework-select')
-  const [config, setConfig] = useState<Partial<ProjectConfig>>({ path, wizard })
+  const [phase, setPhase] = useState<Phase>('project-name')
+  const [config, setConfig] = useState<Partial<ProjectConfig>>({
+    parentDir,
+    wizard,
+  })
   const [errorMsg, setErrorMsg] = useState('')
+
+  const handleName = useCallback(
+    (name: string) => {
+      setConfig(c => ({
+        ...c,
+        name,
+        path: path.join(path.resolve(parentDir), name),
+      }))
+      setPhase('framework-select')
+    },
+    [parentDir],
+  )
 
   const handleFramework = useCallback((framework: Framework) => {
     setConfig(c => ({ ...c, framework }))
@@ -62,6 +80,7 @@ export function App({ path, wizard }: Props) {
     <Box flexDirection="column" paddingX={1}>
       <Header />
 
+      {phase === 'project-name' && <ProjectNameInput onSubmit={handleName} />}
       {phase === 'framework-select' && (
         <FrameworkSelect onSelect={handleFramework} />
       )}

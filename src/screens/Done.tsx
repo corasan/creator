@@ -13,6 +13,10 @@ export function Done({ config }: Props) {
       </Text>
       <Box flexDirection="column" marginLeft={2}>
         <Text>
+          <Text dimColor>Name: </Text>
+          <Text color="cyan">{config.name}</Text>
+        </Text>
+        <Text>
           <Text dimColor>Path: </Text>
           <Text color="cyan">{config.path}</Text>
         </Text>

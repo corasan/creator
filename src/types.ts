@@ -27,7 +27,9 @@ export interface BackendOption {
 }
 
 export interface ProjectConfig {
-  path: string
+  parentDir: string  // parent directory (-p flag)
+  name: string       // project name (entered in UI)
+  path: string       // full path = parentDir + name
   framework: Framework
   backend: Backend
   packages: string[] // selected optional package values
