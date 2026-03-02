@@ -3,6 +3,7 @@ import type {
   SDKMessage,
 } from '@anthropic-ai/claude-agent-sdk'
 import type { AgentTask, ProjectConfig } from '../types.js'
+import { parseAgentLines } from './parseAgentLines.js'
 
 export interface AgentUpdate {
   type: 'plan'
@@ -109,81 +110,15 @@ export async function* runAgent(
       const lines = buffer.split('\n')
       buffer = lines.pop() ?? ''
 
-      for (const line of lines) {
-        const trimmed = line.trim()
-
-        if (!planEmitted && trimmed.startsWith('PLAN:')) {
-          try {
-            const json = JSON.parse(trimmed.slice(5)) as {
-              tasks: Array<{ id: string; label: string }>
-            }
-            const tasks: AgentTask[] = json.tasks.map(t => ({
-              ...t,
-              status: 'pending' as const,
-            }))
-            yield { type: 'plan', tasks }
-            planEmitted = true
-          } catch {
-            // malformed plan, ignore
-          }
-        } else if (trimmed.startsWith('TASK_START:')) {
-          const taskId = trimmed.slice(11).trim()
-          yield { type: 'progress', taskId, status: 'running' }
-        } else if (trimmed.startsWith('TASK_DONE:')) {
-          const taskId = trimmed.slice(10).trim()
-          yield { type: 'progress', taskId, status: 'done' }
-        } else if (trimmed.startsWith('TASK_ERROR:')) {
-          const rest = trimmed.slice(11)
-          const colonIdx = rest.indexOf(':')
-          const taskId = colonIdx >= 0 ? rest.slice(0, colonIdx) : rest
-          const error =
-            colonIdx >= 0 ? rest.slice(colonIdx + 1) : 'Unknown error'
-          yield { type: 'progress', taskId, status: 'error', error }
-        }
-      }
+      const parsed = parseAgentLines(lines, planEmitted)
+      for (const event of parsed.events) yield event
+      planEmitted = parsed.planEmitted
 
       if (msg.type === 'result') {
         if (buffer.trim()) {
-          for (const line of buffer.split('\n')) {
-            const trimmed = line.trim()
-            if (!planEmitted && trimmed.startsWith('PLAN:')) {
-              try {
-                const json = JSON.parse(trimmed.slice(5)) as {
-                  tasks: Array<{ id: string; label: string }>
-                }
-                const tasks: AgentTask[] = json.tasks.map(t => ({
-                  ...t,
-                  status: 'pending' as const,
-                }))
-                yield { type: 'plan', tasks }
-                planEmitted = true
-              } catch {
-                // malformed plan, ignore
-              }
-            } else if (trimmed.startsWith('TASK_START:')) {
-              yield {
-                type: 'progress',
-                taskId: trimmed.slice(11).trim(),
-                status: 'running',
-              }
-            } else if (trimmed.startsWith('TASK_DONE:')) {
-              yield {
-                type: 'progress',
-                taskId: trimmed.slice(10).trim(),
-                status: 'done',
-              }
-            } else if (trimmed.startsWith('TASK_ERROR:')) {
-              const rest = trimmed.slice(11)
-              const colonIdx = rest.indexOf(':')
-              yield {
-                type: 'progress',
-                taskId: colonIdx >= 0 ? rest.slice(0, colonIdx) : rest,
-                status: 'error',
-                error:
-                  colonIdx >= 0 ? rest.slice(colonIdx + 1) : 'Unknown error',
-              }
-            }
-          }
+          const flushed = parseAgentLines(buffer.split('\n'), planEmitted)
+          for (const event of flushed.events) yield event
+          planEmitted = flushed.planEmitted
           buffer = ''
         }
         yield { type: 'done' }
@@ -192,45 +127,9 @@ export async function* runAgent(
     }
 
     if (buffer.trim()) {
-      for (const line of buffer.split('\n')) {
-        const trimmed = line.trim()
-        if (!planEmitted && trimmed.startsWith('PLAN:')) {
-          try {
-            const json = JSON.parse(trimmed.slice(5)) as {
-              tasks: Array<{ id: string; label: string }>
-            }
-            const tasks: AgentTask[] = json.tasks.map(t => ({
-              ...t,
-              status: 'pending' as const,
-            }))
-            yield { type: 'plan', tasks }
-            planEmitted = true
-          } catch {
-            // malformed plan, ignore
-          }
-        } else if (trimmed.startsWith('TASK_START:')) {
-          yield {
-            type: 'progress',
-            taskId: trimmed.slice(11).trim(),
-            status: 'running',
-          }
-        } else if (trimmed.startsWith('TASK_DONE:')) {
-          yield {
-            type: 'progress',
-            taskId: trimmed.slice(10).trim(),
-            status: 'done',
-          }
-        } else if (trimmed.startsWith('TASK_ERROR:')) {
-          const rest = trimmed.slice(11)
-          const colonIdx = rest.indexOf(':')
-          yield {
-            type: 'progress',
-            taskId: colonIdx >= 0 ? rest.slice(0, colonIdx) : rest,
-            status: 'error',
-            error: colonIdx >= 0 ? rest.slice(colonIdx + 1) : 'Unknown error',
-          }
-        }
-      }
+      const flushed = parseAgentLines(buffer.split('\n'), planEmitted)
+      for (const event of flushed.events) yield event
+      planEmitted = flushed.planEmitted
     }
     yield { type: 'done' }
   } catch (e) {
