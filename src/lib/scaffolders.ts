@@ -7,10 +7,11 @@ export interface ScaffoldResult {
   error?: string
 }
 
-function runCmd(cmd: string, args: string[]): ScaffoldResult {
+function runCmd(cmd: string, args: string[], cwd?: string): ScaffoldResult {
   const result = Bun.spawnSync([cmd, ...args], {
     stdout: 'inherit',
     stderr: 'inherit',
+    cwd,
   })
   if (result.exitCode !== 0) {
     return { success: false, error: `Exit code ${result.exitCode}` }
@@ -23,32 +24,35 @@ export function scaffoldProject(
   targetPath: string,
 ): ScaffoldResult {
   const name = path.basename(targetPath)
+  const parentDir = path.dirname(path.resolve(targetPath))
 
   switch (framework) {
     case 'expo':
-      return runCmd('bunx', [
-        'create-expo-app',
-        name,
-        '--template',
-        'blank-typescript',
-      ])
+      return runCmd(
+        'bunx',
+        ['create-expo-app', name, '--template', 'blank-typescript'],
+        parentDir,
+      )
     case 'tanstack-start':
-      return runCmd('bunx', [
-        'create-tsrouter-app@latest',
-        name,
-        '--template',
-        'start-basic',
-      ])
+      return runCmd(
+        'bunx',
+        ['create-tsrouter-app@latest', name, '--template', 'start-basic'],
+        parentDir,
+      )
     case 'nextjs':
-      return runCmd('bunx', [
-        'create-next-app@latest',
-        name,
-        '--typescript',
-        '--tailwind',
-        '--no-git',
-      ])
+      return runCmd(
+        'bunx',
+        [
+          'create-next-app@latest',
+          name,
+          '--typescript',
+          '--tailwind',
+          '--no-git',
+        ],
+        parentDir,
+      )
     case 'nitro-library':
-      return runCmd('bunx', ['create-nitro-lib', name])
+      return runCmd('bunx', ['create-nitro-lib', name], parentDir)
     case 'ink-cli':
       return scaffoldInkCli(targetPath)
     default:

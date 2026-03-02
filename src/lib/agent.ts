@@ -143,11 +143,95 @@ export async function* runAgent(
       }
 
       if (msg.type === 'result') {
+        if (buffer.trim()) {
+          for (const line of buffer.split('\n')) {
+            const trimmed = line.trim()
+            if (!planEmitted && trimmed.startsWith('PLAN:')) {
+              try {
+                const json = JSON.parse(trimmed.slice(5)) as {
+                  tasks: Array<{ id: string; label: string }>
+                }
+                const tasks: AgentTask[] = json.tasks.map(t => ({
+                  ...t,
+                  status: 'pending' as const,
+                }))
+                yield { type: 'plan', tasks }
+                planEmitted = true
+              } catch {
+                // malformed plan, ignore
+              }
+            } else if (trimmed.startsWith('TASK_START:')) {
+              yield {
+                type: 'progress',
+                taskId: trimmed.slice(11).trim(),
+                status: 'running',
+              }
+            } else if (trimmed.startsWith('TASK_DONE:')) {
+              yield {
+                type: 'progress',
+                taskId: trimmed.slice(10).trim(),
+                status: 'done',
+              }
+            } else if (trimmed.startsWith('TASK_ERROR:')) {
+              const rest = trimmed.slice(11)
+              const colonIdx = rest.indexOf(':')
+              yield {
+                type: 'progress',
+                taskId: colonIdx >= 0 ? rest.slice(0, colonIdx) : rest,
+                status: 'error',
+                error:
+                  colonIdx >= 0 ? rest.slice(colonIdx + 1) : 'Unknown error',
+              }
+            }
+          }
+          buffer = ''
+        }
         yield { type: 'done' }
         return
       }
     }
 
+    if (buffer.trim()) {
+      for (const line of buffer.split('\n')) {
+        const trimmed = line.trim()
+        if (!planEmitted && trimmed.startsWith('PLAN:')) {
+          try {
+            const json = JSON.parse(trimmed.slice(5)) as {
+              tasks: Array<{ id: string; label: string }>
+            }
+            const tasks: AgentTask[] = json.tasks.map(t => ({
+              ...t,
+              status: 'pending' as const,
+            }))
+            yield { type: 'plan', tasks }
+            planEmitted = true
+          } catch {
+            // malformed plan, ignore
+          }
+        } else if (trimmed.startsWith('TASK_START:')) {
+          yield {
+            type: 'progress',
+            taskId: trimmed.slice(11).trim(),
+            status: 'running',
+          }
+        } else if (trimmed.startsWith('TASK_DONE:')) {
+          yield {
+            type: 'progress',
+            taskId: trimmed.slice(10).trim(),
+            status: 'done',
+          }
+        } else if (trimmed.startsWith('TASK_ERROR:')) {
+          const rest = trimmed.slice(11)
+          const colonIdx = rest.indexOf(':')
+          yield {
+            type: 'progress',
+            taskId: colonIdx >= 0 ? rest.slice(0, colonIdx) : rest,
+            status: 'error',
+            error: colonIdx >= 0 ? rest.slice(colonIdx + 1) : 'Unknown error',
+          }
+        }
+      }
+    }
     yield { type: 'done' }
   } catch (e) {
     yield { type: 'error', message: String(e) }
